@@ -16,16 +16,13 @@
 </head>
 <body class="bg-white text-gray-900">
 
-  <!-- HEADER -->
   <header class="sticky top-0 z-50 bg-black text-white shadow-lg">
     <div class="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
       <a href="index.html" class="font-serif font-black text-lg md:text-xl">REMEDY <span class="text-green-600">NEWS</span> <span class="text-red-600">DROP</span></a>
-      <!-- FIXED ADMIN LINK HERE -->
       <a href="admin.html" class="text-xs bg-green-600 px-3 py-1 rounded font-bold hover:bg-green-700 transition">ADMIN</a>
     </div>
   </header>
 
-  <!-- BREAKING TICKER -->
   <div id="ticker" class="bg-red-600 text-white py-2 overflow-hidden whitespace-nowrap hidden">
     <div class="inline-block animate-marquee">
       <span class="font-black mr-3">🚨 BREAKING:</span>
@@ -33,19 +30,14 @@
     </div>
   </div>
 
-  <!-- MAIN CONTENT -->
   <main class="max-w-7xl mx-auto px-4 py-6">
-    
-    <!-- HERO SECTION -->
-    <div id="hero" class="mb-8"></div>
-
-    <!-- LATEST NEWS GRID -->
+    <div id="hero" class="mb-8 flex items-center justify-center min-h-[200px]">
+      <p class="text-gray-400">Loading latest news...</p>
+    </div>
     <h2 class="font-serif font-black text-xl border-l-4 border-green-600 pl-3 mb-4 uppercase mt-8">Latest News</h2>
     <div id="news-grid" class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4"></div>
-
   </main>
 
-  <!-- FOOTER -->
   <footer class="bg-black text-white py-8 mt-8">
     <div class="max-w-7xl mx-auto px-4 text-center">
       <p class="font-serif font-black text-xl">REMEDY <span class="text-green-600">NEWS</span> <span class="text-red-600">DROP</span></p>
@@ -53,94 +45,72 @@
     </div>
   </footer>
 
-  <!-- JAVASCRIPT TO LOAD NEWS -->
-  <script>
-    async function loadNews() {
-      try {
-        // Fetch files from your GitHub repo
-        const res = await fetch('https://api.github.com/repos/remedymorgan2-rgb/rnd-news/contents/content/news');
-        const files = await res.json();
-        const news = [];
-        
-        for (const f of files) {
-          if (f.name.endsWith('.md')) {
-            const c = await (await fetch(f.download_url)).text();
-            
-            // Parse Frontmatter
-            const fm = c.match(/^---\n([\s\S]*?)\n---/);
-            const d = {};
-            if (fm) {
-              fm[1].split('\n').forEach(l => {
-                const [k, ...v] = l.split(':');
-                if (k && v.length) {
-                  let val = v.join(':').trim().replace(/^["']|["']$/g, '');
-                  if (val === 'true') val = true; 
-                  if (val === 'false') val = false;
-                  d[k.trim()] = val;
-                }
-              });
-            }
-            
-            // Parse Body
-            const b = c.match(/---\n[\s\S]*?\n---\n([\s\S]*)/);
-            d.body = b ? b[1] : ''; 
-            d.slug = f.name.replace('.md', '');
-            news.push(d);
-          }
-        }
-        
-        // Sort by date (newest first)
-        news.sort((a, b) => new Date(b.date) - new Date(a.date));
-        
-        // 1. Render Breaking Ticker
-        const brk = news.filter(n => n.breaking);
-        if (brk.length) {
-          document.getElementById('ticker').classList.remove('hidden');
-          document.getElementById('breaking-news').innerHTML = brk.map(n => 
-            `<span class="mx-4"><a href="article.html?slug=${n.slug}" class="hover:underline">${n.title}</a></span>`
-          ).join('');
-        }
-        
-        // 2. Render Hero (Latest Post)
-        if (news[0]) {
-          const h = news[0];
-          document.getElementById('hero').innerHTML = `
-            <a href="article.html?slug=${h.slug}" class="block group">
-              <div class="grid md:grid-cols-2 gap-4 items-center">
-                <img src="${h.image}" alt="${h.title}" class="w-full aspect-[4/5] md:aspect-video object-cover rounded-xl group-hover:scale-105 transition-transform" />
-                <div>
-                  <span class="bg-red-600 text-white text-xs font-black px-3 py-1 rounded-full uppercase">${h.category}</span>
-                  <h1 class="font-serif font-black text-2xl md:text-4xl mt-3 uppercase leading-tight group-hover:text-green-600 transition">${h.title}</h1>
-                  <p class="mt-3 text-gray-600 text-sm md:text-base">${h.excerpt}</p>
-                  <p class="mt-3 text-xs text-gray-400">By ${h.author || 'Remedy Morgan'} · ${new Date(h.date).toLocaleDateString('en-NG')}</p>
-                </div>
-              </div>
-            </a>
-          `;
-        }
-        
-        // 3. Render News Grid (Posts 2 to 9)
-        const gridItems = news.slice(1, 9);
-        if (gridItems.length > 0) {
-          document.getElementById('news-grid').innerHTML = gridItems.map(n => `
-            <a href="article.html?slug=${n.slug}" class="group block">
-              <img src="${n.image}" alt="${n.title}" class="w-full aspect-[4/5] object-cover rounded-lg group-hover:scale-105 transition-transform" loading="lazy" />
-              <span class="text-[10px] font-black text-red-600 uppercase mt-2 block">${n.category}</span>
-              <h3 class="font-bold text-xs mt-1 uppercase leading-snug group-hover:text-green-600 transition line-clamp-3">${n.title}</h3>
-            </a>
-          `).join('');
-        } else {
-          document.getElementById('news-grid').innerHTML = '<p class="col-span-4 text-center text-gray-500 py-8">No more news yet. Check the Admin panel!</p>';
-        }
+  <!-- FIREBASE TO LOAD NEWS -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-      } catch(e) { 
-        console.log('Error loading news:', e); 
-        document.getElementById('news-grid').innerHTML = '<p class="col-span-4 text-center text-red-500 py-8">Error loading news. Make sure you have files in the content/news folder.</p>';
-      }
-    }
+    // USE THE SAME FIREBASE CONFIG AS YOUR ADMIN PANEL
+    const firebaseConfig = {
+      apiKey: "AIzaSyAyNdQEZ4Jqj8FezBKTeWxAO773FN3qVsA",
+      authDomain: "deprince-auto.firebaseapp.com",
+      projectId: "deprince-auto",
+      storageBucket: "deprince-auto.firebasestorage.app",
+      messagingSenderId: "1091473342949",
+      appId: "1:1091473342949:web:ee837087d4a6e089f46f0c"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const q = query(collection(db, "rnd_news"), orderBy("createdAt", "desc"));
     
-    // Run the function
-    loadNews();
+    onSnapshot(q, (snapshot) => {
+      const news = [];
+      snapshot.forEach((doc) => {
+        news.push({ id: doc.id, ...doc.data() });
+      });
+
+      // 1. Render Breaking Ticker
+      const brk = news.filter(n => n.breaking);
+      if (brk.length) {
+        document.getElementById('ticker').classList.remove('hidden');
+        document.getElementById('breaking-news').innerHTML = brk.map(n => 
+          `<span class="mx-4"><a href="article.html?id=${n.id}" class="hover:underline">${n.title}</a></span>`
+        ).join('');
+      }
+      
+      // 2. Render Hero (Latest Post)
+      if (news[0]) {
+        const h = news[0];
+        const date = new Date(h.createdAt).toLocaleDateString('en-NG', {year:'numeric',month:'short',day:'numeric'});
+        document.getElementById('hero').innerHTML = `
+          <a href="article.html?id=${h.id}" class="block group">
+            <div class="grid md:grid-cols-2 gap-4 items-center">
+              <img src="${h.imgUrl}" alt="${h.title}" class="w-full aspect-[4/5] md:aspect-video object-cover rounded-xl group-hover:scale-105 transition-transform" />
+              <div>
+                <span class="bg-red-600 text-white text-xs font-black px-3 py-1 rounded-full uppercase">${h.category}</span>
+                <h1 class="font-serif font-black text-2xl md:text-4xl mt-3 uppercase leading-tight group-hover:text-green-600 transition">${h.title}</h1>
+                <p class="mt-3 text-gray-600 text-sm md:text-base">${h.excerpt}</p>
+                <p class="mt-3 text-xs text-gray-400">By ${h.author || 'Remedy Morgan'} · ${date}</p>
+              </div>
+            </div>
+          </a>
+        `;
+      }
+      
+      // 3. Render News Grid (Posts 2 to 9)
+      const gridItems = news.slice(1, 9);
+      if (gridItems.length > 0) {
+        document.getElementById('news-grid').innerHTML = gridItems.map(n => `
+          <a href="article.html?id=${n.id}" class="group block">
+            <img src="${n.imgUrl}" alt="${n.title}" class="w-full aspect-[4/5] object-cover rounded-lg group-hover:scale-105 transition-transform" loading="lazy" />
+            <span class="text-[10px] font-black text-red-600 uppercase mt-2 block">${n.category}</span>
+            <h3 class="font-bold text-xs mt-1 uppercase leading-snug group-hover:text-green-600 transition line-clamp-3">${n.title}</h3>
+          </a>
+        `).join('');
+      }
+    });
   </script>
 </body>
 </html>
