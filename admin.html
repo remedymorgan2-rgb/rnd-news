@@ -6,10 +6,10 @@
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 p-4">
-  <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-6">
+  <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-6 mt-4">
     <h1 class="text-2xl font-bold mb-4 text-center">📝 CREATE NEWS</h1>
     
-    <input type="text" id="title" placeholder="Title" class="w-full border p-2 mb-3 rounded">
+    <input type="text" id="title" placeholder="News Title" class="w-full border p-2 mb-3 rounded">
     
     <select id="category" class="w-full border p-2 mb-3 rounded">
       <option>Health</option>
@@ -19,7 +19,7 @@
       <option>Sports</option>
     </select>
     
-    <input type="text" id="image" placeholder="Image URL (upload to imgur.com)" class="w-full border p-2 mb-3 rounded">
+    <input type="text" id="image" placeholder="Image URL (use imgur.com)" class="w-full border p-2 mb-3 rounded">
     
     <input type="text" id="excerpt" placeholder="Short summary" class="w-full border p-2 mb-3 rounded">
     
@@ -58,7 +58,7 @@ date: ${date}
 
 ${body}`;
 
-      const token = prompt('Enter GitHub token (get from github.com/settings/tokens):');
+      const token = prompt('Enter your GitHub token:');
       if (!token) return;
 
       const path = `content/news/${slug}.md`;
@@ -77,9 +77,12 @@ ${body}`;
           })
         });
         
-        document.getElementById('msg').textContent = '✅ Published!';
-        document.getElementById('msg').className = 'mt-3 text-center text-green-600 font-bold';
-        document.getElementById('msg').classList.remove('hidden');
+        const msg = document.getElementById('msg');
+        msg.textContent = '✅ Published! Go to homepage to see it.';
+        msg.className = 'mt-3 text-center text-green-600 font-bold';
+        msg.classList.remove('hidden');
+        
+        setTimeout(() => window.location.href = '/rnd-news/', 2000);
       } catch(e) {
         alert('Error: ' + e.message);
       }
